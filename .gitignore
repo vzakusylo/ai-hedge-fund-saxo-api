@@ -26,7 +26,7 @@ ENV/
 
 # Environment Variables
 .env
-.cache/
+# .cache/ is intentionally tracked so CI can use cached financial data without API calls
 
 # IDE
 .idea/
