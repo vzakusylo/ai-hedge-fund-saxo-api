@@ -150,6 +150,15 @@ def main() -> None:
     parser.add_argument("--asset-type", default="Stock", help="Saxo asset type (default: Stock)")
     parser.add_argument("--days-back", type=int, default=90,
                         help="Days of historical data to analyse (default 90)")
+    # Options trading
+    parser.add_argument("--options", action="store_true",
+                        help="Also run options strategies (bear put spreads) based on agent signals")
+    parser.add_argument("--options-ticker", default="QQQ",
+                        help="Ticker for options strategies (default: QQQ)")
+    parser.add_argument("--options-expiry", default="",
+                        help="Options expiry date YYYY-MM-DD (default: ~45 days out)")
+    parser.add_argument("--options-budget", type=float, default=200.0,
+                        help="Max debit budget per options strategy in USD (default: 200)")
     args = parser.parse_args()
 
     tickers = [t.strip().upper() for t in args.ticker.split(",")]
@@ -226,6 +235,96 @@ def main() -> None:
         asset_type=args.asset_type,
         auto_approve=args.auto_approve,
     )
+
+    # ---- Step 4: Options strategies (optional) ---- #
+    if args.options:
+        from src.saxo.options import build_bear_put_spread, execute_option_strategy
+        from datetime import timedelta as td
+
+        # Determine expiry: use provided or default to ~45 days out on 3rd Friday
+        if args.options_expiry:
+            expiry = args.options_expiry
+        else:
+            target = datetime.today() + td(days=45)
+            # Find next 3rd Friday of the month
+            from calendar import monthrange
+            y, m = target.year, target.month
+            fridays = [d for d in range(1, monthrange(y, m)[1] + 1)
+                       if datetime(y, m, d).weekday() == 4]
+            third_friday = datetime(y, m, fridays[2] if len(fridays) >= 3 else fridays[-1])
+            expiry = third_friday.strftime("%Y-%m-%d")
+
+        opt_ticker = args.options_ticker
+        budget = args.options_budget
+        account_key = saxo_state["account_key"]
+
+        print(f"\n{Fore.CYAN}{'=' * 60}")
+        print(f"  Options Strategies — {opt_ticker}  expiry={expiry}  budget=${budget}")
+        print(f"{'=' * 60}{Style.RESET_ALL}")
+
+        # Determine bearish signal strength from agent decisions
+        # Count bearish signals across all analysed tickers
+        bear_count = sum(
+            1 for d in decisions.values()
+            if d.get("action") in ("sell", "short")
+        )
+        hold_count = sum(1 for d in decisions.values() if d.get("action") == "hold")
+        total = len(decisions)
+        print(f"  Agent signals: {bear_count} bearish / {hold_count} hold / {total} total")
+
+        if bear_count == 0 and hold_count == total:
+            print(Fore.YELLOW + "  No bearish signals — skipping bear put spread.")
+        else:
+            # Build strategies based on budget
+            # Strategy A: ATM bear put spread ($5 wide)
+            # We'll need current QQQ price to set strikes — use Saxo price
+            root = saxo.get_option_root(opt_ticker)
+            if root:
+                # Use Saxo underlying price as proxy
+                underlying_uic = None
+                stock_inst = saxo.find_instrument(opt_ticker, "Stock")
+                if not stock_inst:
+                    stock_inst = saxo.find_instrument(opt_ticker, "Etf")
+                if stock_inst:
+                    underlying_uic = stock_inst["Identifier"]
+                    spot = saxo.get_instrument_price(underlying_uic, "Etf") or \
+                           saxo.get_instrument_price(underlying_uic, "Stock")
+                else:
+                    spot = None
+
+                if spot:
+                    # Round to nearest 5 for ATM strike
+                    import math
+                    long_strike = round(math.floor(spot / 5) * 5, 0)
+                    short_strike = long_strike - 5.0
+                    print(f"  {opt_ticker} spot ~${spot:.2f}  →  {long_strike}/{short_strike} bear put spread")
+                else:
+                    # Fallback: use hardcoded strikes from the analysis
+                    long_strike, short_strike = 685.0, 680.0
+                    print(f"  Using default strikes {long_strike}/{short_strike}")
+
+                strategy = build_bear_put_spread(
+                    saxo=saxo,
+                    ticker=opt_ticker,
+                    expiry=expiry,
+                    long_strike=long_strike,
+                    short_strike=short_strike,
+                    quantity=1,
+                )
+                if strategy:
+                    if strategy.max_risk and strategy.max_risk > budget:
+                        print(Fore.YELLOW +
+                              f"  Max risk ${strategy.max_risk} exceeds budget ${budget} — skipping.")
+                    else:
+                        execute_option_strategy(
+                            strategy=strategy,
+                            saxo=saxo,
+                            account_key=account_key,
+                            dry_run=args.dry_run,
+                            auto_approve=args.auto_approve,
+                        )
+            else:
+                print(Fore.RED + f"  Option root not found for {opt_ticker}")
 
 
 if __name__ == "__main__":

@@ -78,6 +78,7 @@ jobs:
           ARGS="--ticker ${{ inputs.tickers }} --model ${{ inputs.model }} --auto-approve"
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           if [ "${{ inputs.refresh_cache }}" = "true" ]; then ARGS="$ARGS --refresh-cache"; fi
+          ARGS="$ARGS --options --options-ticker QQQ --options-budget 200"
           echo "Running: py saxo_run.py $ARGS"
           python saxo_run.py $ARGS
         env:

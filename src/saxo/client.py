@@ -70,6 +70,165 @@ class SaxoClient:
         return data.get("Data", [])
 
     # ------------------------------------------------------------------ #
+    #  Options                                                             #
+    # ------------------------------------------------------------------ #
+
+    def get_option_root(self, ticker: str) -> Optional[dict]:
+        """Find the option root (ContractOptionRoot) for a ticker."""
+        result = self._get("/ref/v1/instruments", params={
+            "Keywords": ticker,
+            "AssetTypes": "StockOption",
+            "$top": 10,
+        })
+        for inst in result.get("Data", []):
+            sym = inst.get("Symbol", "").upper().split(":")[0]
+            if sym == ticker.upper() and inst.get("SummaryType") == "ContractOptionRoot":
+                return inst
+        return None
+
+    def get_option_chain(self, option_root_id: int) -> list[dict]:
+        """Return all expiration/strike entries for an option root."""
+        data = self._get(f"/ref/v1/instruments/contractoptionspaces/{option_root_id}", params={})
+        return data.get("OptionSpace", [])
+
+    def find_option(
+        self,
+        option_root_id: int,
+        expiry_date: str,   # e.g. "2026-09-18"
+        strike: float,
+        put_call: str,      # "Put" or "Call"
+    ) -> Optional[dict]:
+        """
+        Find a specific option contract by expiry, strike and type.
+        Returns the option dict with Uic or None.
+        """
+        chain = self.get_option_chain(option_root_id)
+        for space in chain:
+            exp = space.get("Expiry", "")[:10]
+            if exp != expiry_date:
+                continue
+            for opt in space.get("SpecificOptions", []):
+                if (
+                    opt.get("PutCall") == put_call
+                    and abs(opt.get("StrikePrice", 0) - strike) < 0.01
+                    and opt.get("TradingStatus") == "Tradable"
+                ):
+                    return opt
+        return None
+
+    def get_option_price(self, uic: int) -> Optional[dict]:
+        """Return quote data for an option contract."""
+        try:
+            data = self._get("/trade/v1/infoprices", params={
+                "Uic": uic,
+                "AssetType": "StockOption",
+                "FieldGroups": "Quote,Greeks",
+            })
+            return data
+        except Exception:
+            return None
+
+    def place_option_order(
+        self,
+        account_key: str,
+        uic: int,
+        buy_sell: str,      # "Buy" or "Sell"
+        quantity: int,
+        order_type: str = "Market",
+        price: Optional[float] = None,
+    ) -> dict:
+        """Place an option order (single leg)."""
+        body = {
+            "AccountKey": account_key,
+            "AssetType": "StockOption",
+            "Uic": uic,
+            "BuySell": buy_sell,
+            "Amount": quantity,
+            "OrderType": order_type,
+            "OrderDuration": {"DurationType": "DayOrder"},
+            "ManualOrder": False,
+        }
+        if order_type == "Limit" and price is not None:
+            body["Price"] = price
+        return self._post("/trade/v2/orders", body)
+
+    def place_option_spread(
+        self,
+        account_key: str,
+        leg1_uic: int,
+        leg1_buy_sell: str,
+        leg2_uic: int,
+        leg2_buy_sell: str,
+        quantity: int,
+        net_price: Optional[float] = None,
+    ) -> dict:
+        """
+        Place a two-leg option spread as a multi-leg order.
+        leg1_buy_sell / leg2_buy_sell: "Buy" or "Sell"
+        net_price: debit (positive) or credit (negative) per share
+        """
+        legs = [
+            {
+                "AccountKey": account_key,
+                "AssetType": "StockOption",
+                "Uic": leg1_uic,
+                "BuySell": leg1_buy_sell,
+                "Amount": quantity,
+                "OrderType": "Limit" if net_price is not None else "Market",
+                "OrderDuration": {"DurationType": "DayOrder"},
+            },
+            {
+                "AccountKey": account_key,
+                "AssetType": "StockOption",
+                "Uic": leg2_uic,
+                "BuySell": leg2_buy_sell,
+                "Amount": quantity,
+                "OrderType": "Limit" if net_price is not None else "Market",
+                "OrderDuration": {"DurationType": "DayOrder"},
+            },
+        ]
+        if net_price is not None:
+            legs[0]["Price"] = net_price
+        body = {"Orders": legs}
+        return self._post("/trade/v2/orders/multileg", body)
+
+    def precheck_option_spread(
+        self,
+        account_key: str,
+        leg1_uic: int,
+        leg1_buy_sell: str,
+        leg2_uic: int,
+        leg2_buy_sell: str,
+        quantity: int,
+        net_price: Optional[float] = None,
+    ) -> dict:
+        """Pre-check a two-leg spread without placing it."""
+        legs = [
+            {
+                "AccountKey": account_key,
+                "AssetType": "StockOption",
+                "Uic": leg1_uic,
+                "BuySell": leg1_buy_sell,
+                "Amount": quantity,
+                "OrderType": "Limit" if net_price is not None else "Market",
+                "OrderDuration": {"DurationType": "DayOrder"},
+            },
+            {
+                "AccountKey": account_key,
+                "AssetType": "StockOption",
+                "Uic": leg2_uic,
+                "BuySell": leg2_buy_sell,
+                "Amount": quantity,
+                "OrderType": "Limit" if net_price is not None else "Market",
+                "OrderDuration": {"DurationType": "DayOrder"},
+            },
+        ]
+        if net_price is not None:
+            legs[0]["Price"] = net_price
+        body = {"Orders": legs}
+        return self._post("/trade/v2/orders/multileg/precheck", body)
+
+    # ------------------------------------------------------------------ #
     #  Instruments                                                         #
     # ------------------------------------------------------------------ #
 
