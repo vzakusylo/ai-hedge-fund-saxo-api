@@ -50,6 +50,29 @@ jobs:
           restore-keys: |
             financial-cache-${{ inputs.tickers }}-
 
+      - name: Check Saxo token expiry
+        run: |
+          python -c "
+          import base64, json, time, sys
+          token = '${{ secrets.SAXO_ACCESS_TOKEN }}'
+          try:
+              payload = json.loads(base64.b64decode(token.split('.')[1] + '==').decode())
+              exp = int(payload.get('exp', 0))
+              remaining = exp - time.time()
+              hours = remaining / 3600
+              if remaining <= 0:
+                  print('ERROR: Saxo token has EXPIRED. Update SAXO_ACCESS_TOKEN secret at:')
+                  print('https://www.developer.saxo/openapi/token/current')
+                  sys.exit(1)
+              elif remaining < 3600:
+                  print(f'WARNING: Token expires in {remaining/60:.0f} minutes!')
+              else:
+                  print(f'OK: Token valid for {hours:.1f} hours')
+          except Exception as e:
+              print(f'ERROR: Could not parse token: {e}')
+              sys.exit(1)
+          "
+
       - name: Run AI Hedge Fund → Saxo
         run: |
           ARGS="--ticker ${{ inputs.tickers }} --model ${{ inputs.model }} --auto-approve"
