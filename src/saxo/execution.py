@@ -65,6 +65,7 @@ def approve_and_execute(
     saxo_client: Optional[SaxoClient] = None,
     dry_run: bool = False,
     asset_type: str = "Stock",
+    auto_approve: bool = False,
 ) -> dict[str, dict]:
     """
     Show decisions to the human, get approval, then execute via Saxo API.
@@ -119,10 +120,13 @@ def approve_and_execute(
     if dry_run:
         print(Fore.YELLOW + "[DRY RUN] No real orders will be placed — using pre-check only.\n")
 
+    if auto_approve:
+        print(Fore.YELLOW + "[AUTO-APPROVE] All orders will be approved automatically.\n")
+
     # ---- Human approval loop ---- #
     results: dict[str, dict] = {}
 
-    approval_mode = _ask_approval_mode()
+    approval_mode = "all" if auto_approve else _ask_approval_mode()
 
     for ticker, dec in tradeable.items():
         if ticker not in instruments:

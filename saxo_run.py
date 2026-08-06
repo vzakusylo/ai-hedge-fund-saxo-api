@@ -143,6 +143,8 @@ def main() -> None:
     parser.add_argument("--show-reasoning", action="store_true", help="Print analyst reasoning")
     parser.add_argument("--dry-run", action="store_true",
                         help="Use Saxo pre-check endpoint — no real orders placed")
+    parser.add_argument("--auto-approve", action="store_true",
+                        help="Automatically approve all orders (for CI/cloud runs)")
     parser.add_argument("--refresh-cache", action="store_true",
                         help="Clear the financial data cache and re-fetch from API")
     parser.add_argument("--asset-type", default="Stock", help="Saxo asset type (default: Stock)")
@@ -222,6 +224,7 @@ def main() -> None:
         saxo_client=saxo,
         dry_run=args.dry_run,
         asset_type=args.asset_type,
+        auto_approve=args.auto_approve,
     )
 
 

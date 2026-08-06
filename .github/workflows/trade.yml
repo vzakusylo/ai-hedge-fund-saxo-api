@@ -1,0 +1,63 @@
+name: Trade
+
+on:
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "Comma-separated tickers (e.g. AAPL,MSFT)"
+        required: true
+        default: "AAPL,MSFT"
+      dry_run:
+        description: "Dry run (pre-check only, no real orders)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      refresh_cache:
+        description: "Refresh financial data cache"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      model:
+        description: "LLM model"
+        required: false
+        default: "gpt-4o"
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e . --quiet
+
+      - name: Restore financial data cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/financial_data.json
+          key: financial-cache-${{ inputs.tickers }}-${{ inputs.refresh_cache == 'true' && github.run_id || 'stable' }}
+          restore-keys: |
+            financial-cache-${{ inputs.tickers }}-
+
+      - name: Run AI Hedge Fund → Saxo
+        run: |
+          ARGS="--ticker ${{ inputs.tickers }} --model ${{ inputs.model }} --auto-approve"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.refresh_cache }}" = "true" ]; then ARGS="$ARGS --refresh-cache"; fi
+          echo "Running: py saxo_run.py $ARGS"
+          python saxo_run.py $ARGS
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FINANCIAL_DATASETS_API_KEY: ${{ secrets.FINANCIAL_DATASETS_API_KEY }}
+          SAXO_ACCESS_TOKEN: ${{ secrets.SAXO_ACCESS_TOKEN }}
