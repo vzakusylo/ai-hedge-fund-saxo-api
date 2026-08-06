@@ -46,9 +46,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/financial_data.json
-          key: financial-cache-${{ inputs.tickers }}-${{ inputs.refresh_cache == 'true' && github.run_id || 'stable' }}
+          key: financial-cache-${{ inputs.refresh_cache == 'true' && github.run_id || 'stable' }}
           restore-keys: |
-            financial-cache-${{ inputs.tickers }}-
+            financial-cache-
 
       - name: Check Saxo token expiry
         run: |
