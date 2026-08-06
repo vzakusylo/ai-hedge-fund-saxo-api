@@ -320,7 +320,16 @@ def get_market_cap(
     """Fetch market cap from the API."""
     # Check if end_date is today
     if end_date == datetime.datetime.now().strftime("%Y-%m-%d"):
-        # Get the market cap from company facts API
+        # Check cache first
+        cache_key = f"company_facts_{ticker}"
+        cached = _cache._prices_cache.get(cache_key)  # reuse prices cache slot
+        if not cached:
+            # Try dedicated company_facts key stored in line_items cache
+            cached = _cache._line_items_cache.get(cache_key)
+        if cached and isinstance(cached, list) and cached:
+            return cached[0].get("market_cap")
+
+        # Fetch from API
         headers = {}
         financial_api_key = api_key or os.environ.get("FINANCIAL_DATASETS_API_KEY")
         if financial_api_key:
@@ -330,11 +339,18 @@ def get_market_cap(
         response = _make_api_request(url, headers)
         if response.status_code != 200:
             print(f"Error fetching company facts: {ticker} - {response.status_code}")
-            return None
-
-        data = response.json()
-        response_model = CompanyFactsResponse(**data)
-        return response_model.company_facts.market_cap
+            # Fall back to cached financial metrics if API unavailable
+        else:
+            try:
+                data = response.json()
+                response_model = CompanyFactsResponse(**data)
+                market_cap = response_model.company_facts.market_cap
+                # Save to cache
+                _cache._line_items_cache[cache_key] = [{"market_cap": market_cap}]
+                _cache.save()
+                return market_cap
+            except Exception:
+                pass
 
     financial_metrics = get_financial_metrics(ticker, end_date, api_key=api_key)
     if not financial_metrics:
