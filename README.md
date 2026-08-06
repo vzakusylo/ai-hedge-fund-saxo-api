@@ -1,8 +1,74 @@
-# AI Hedge Fund
+# AI Hedge Fund + Saxo Bank Integration
 
-This is a proof of concept for an AI-powered hedge fund.  The goal of this project is to explore the use of AI to make trading decisions.  This project is for **educational** purposes only and is not intended for real trading or investment.
+This is a proof of concept for an AI-powered hedge fund with **live order execution via the Saxo Bank OpenAPI**.  The goal of this project is to explore the use of AI to make trading decisions and execute them through a real brokerage API.  This project is for **educational** purposes only and is not intended for real trading or investment.
 
 > **🚧 The project is evolving.** We're rebuilding it into a persistent, always-on AI hedge fund — a *fund* as a first-class entity you can backtest, paper-trade, and (opt-in) run live, with the investor agents reimagined as pluggable, backtestable "alpha models." Read the **[Vision →](VISION.md)** and the **[Roadmap →](ROADMAP.md)**.
+
+## Saxo Bank Integration
+
+This fork adds a complete Saxo Bank OpenAPI integration layer on top of the original ai-hedge-fund:
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `saxo_run.py` | Main entry point — fetches live Saxo portfolio, runs AI agents, executes approved orders |
+| `src/saxo/client.py` | Saxo Bank OpenAPI client (accounts, balances, positions, orders, instruments, order placement) |
+| `src/saxo/execution.py` | Human approval gate — approve all / reject all / per-order interactive prompt |
+| `src/data/cache.py` | Extended with persistent JSON cache (`.cache/financial_data.json`) |
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  saxo_run.py                                                 │
+│                                                              │
+│  1. Connect to Saxo API → fetch balance, positions, orders  │
+│  2. Pass live portfolio state to AI hedge fund agents       │
+│  3. Agents analyze (using cached financial data)            │
+│  4. Portfolio Manager produces BUY/SELL/HOLD decisions      │
+│  5. Human approval prompt [A]ll / [N]one / [P]er-order      │
+│  6. Approved orders → Saxo place_order / precheck_order     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Quick Start
+
+```bash
+# Install dependencies
+py -m pip install -e .
+
+# Copy and fill in .env
+cp .env.example .env
+# Set OPENAI_API_KEY, FINANCIAL_DATASETS_API_KEY, SAXO_ACCESS_TOKEN
+
+# Dry run (pre-check only, no real orders) using cached data
+py saxo_run.py --ticker AAPL,MSFT --dry-run
+
+# Refresh financial data cache and dry run
+py saxo_run.py --ticker AAPL,MSFT --dry-run --refresh-cache
+
+# Live orders (simulation environment)
+py saxo_run.py --ticker AAPL,MSFT
+```
+
+### Environment Variables
+
+```env
+# LLM
+OPENAI_API_KEY=...
+
+# Financial data (https://financialdatasets.ai)
+FINANCIAL_DATASETS_API_KEY=...
+
+# Saxo Bank OpenAPI simulation token
+# Get a fresh token at: https://www.developer.saxo/openapi/token/current
+SAXO_ACCESS_TOKEN=...
+```
+
+> **Token note:** The Saxo simulation token expires every ~24 hours. Refresh it at [developer.saxo/openapi/token](https://www.developer.saxo/openapi/token/current).
+
+---
 
 This system employs several agents working together:
 
