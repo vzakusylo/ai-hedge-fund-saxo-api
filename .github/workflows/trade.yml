@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tickers:
-        description: "Comma-separated tickers (e.g. AAPL,MSFT)"
+        description: "Comma-separated tickers (e.g. AAPL,MSFT,GOOGL)"
         required: true
-        default: "AAPL,MSFT"
+        default: "AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,JPM,V"
       dry_run:
         description: "Dry run (pre-check only, no real orders)"
         required: false
