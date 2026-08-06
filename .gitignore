@@ -26,6 +26,7 @@ ENV/
 
 # Environment Variables
 .env
+.cache/
 
 # IDE
 .idea/
