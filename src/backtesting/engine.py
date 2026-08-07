@@ -88,7 +88,7 @@ class BacktestEngine:
             get_financial_metrics(ticker, self._end_date, limit=10)
             get_insider_trades(ticker, self._end_date, start_date=self._start_date, limit=1000)
             get_company_news(ticker, self._end_date, start_date=self._start_date, limit=1000)
-        
+
         # Preload data for SPY for benchmark comparison
         get_prices("SPY", self._start_date, self._end_date)
 
@@ -162,7 +162,7 @@ class BacktestEngine:
                 "Long/Short Ratio": exposures["Long/Short Ratio"],
             }
             self._portfolio_values.append(point)
-            
+
             # Build daily rows (stateless usage)
             rows = self._results.build_day_rows(
                 date_str=current_date_str,

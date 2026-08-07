@@ -14,7 +14,6 @@ The script:
   4. Executes approved orders through the Saxo Bank OpenAPI.
 """
 import argparse
-import json
 import os
 import sys
 from datetime import datetime, timedelta
@@ -30,10 +29,10 @@ sys.path.insert(0, str(ROOT))
 load_dotenv()
 init(autoreset=True)
 
-from src.main import run_hedge_fund
-from src.saxo.client import SaxoClient
-from src.saxo.execution import approve_and_execute
-from src.data.cache import get_cache
+from src.main import run_hedge_fund  # noqa: E402
+from src.saxo.client import SaxoClient  # noqa: E402
+from src.saxo.execution import approve_and_execute  # noqa: E402
+from src.data.cache import get_cache  # noqa: E402
 
 
 def fetch_saxo_portfolio(saxo: "SaxoClient") -> dict:
@@ -167,7 +166,7 @@ def main() -> None:
     selected_analysts = [a.strip() for a in args.analysts.split(",") if a.strip()] or []
 
     print(f"\n{Fore.CYAN}{'=' * 60}")
-    print(f"  AI Hedge Fund → Saxo Trader")
+    print("  AI Hedge Fund → Saxo Trader")
     print(f"  Tickers : {', '.join(tickers)}")
     print(f"  Period  : {start_date} → {end_date}")
     print(f"  Model   : {args.model} ({args.provider})")

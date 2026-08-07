@@ -160,7 +160,7 @@ def phil_fisher_agent(state: AgentState, agent_id: str = "phil_fisher_agent"):
     state["data"]["analyst_signals"][agent_id] = fisher_analysis
 
     progress.update_status(agent_id, None, "Done")
-    
+
     return {"messages": [message], "data": state["data"]}
 
 
@@ -283,9 +283,9 @@ def analyze_margins_stability(financial_line_items: list) -> dict:
             details.append(f"Operating margin stable or improving ({oldest_op_margin:.1%} -> {newest_op_margin:.1%})")
         elif newest_op_margin > 0:
             raw_score += 1
-            details.append(f"Operating margin positive but slightly declined")
+            details.append("Operating margin positive but slightly declined")
         else:
-            details.append(f"Operating margin may be negative or uncertain")
+            details.append("Operating margin may be negative or uncertain")
     else:
         details.append("Not enough operating margin data points")
 
@@ -393,7 +393,7 @@ def analyze_management_efficiency_leverage(financial_line_items: list) -> dict:
             raw_score += 1
             details.append(f"Majority of periods have positive FCF ({positive_fcf_count}/{len(fcf_values)})")
         else:
-            details.append(f"Free cash flow is inconsistent or often negative")
+            details.append("Free cash flow is inconsistent or often negative")
     else:
         details.append("Insufficient or no FCF data to check consistency")
 
@@ -542,13 +542,13 @@ def generate_fisher_output(
             (
               "system",
               """You are a Phil Fisher AI agent, making investment decisions using his principles:
-  
+
               1. Emphasize long-term growth potential and quality of management.
               2. Focus on companies investing in R&D for future products/services.
               3. Look for strong profitability and consistent margins.
               4. Willing to pay more for exceptional companies but still mindful of valuation.
               5. Rely on thorough research (scuttlebutt) and thorough fundamental checks.
-              
+
               When providing your reasoning, be thorough and specific by:
               1. Discussing the company's growth prospects in detail with specific metrics and trends
               2. Evaluating management quality and their capital allocation decisions
@@ -556,11 +556,11 @@ def generate_fisher_output(
               4. Assessing consistency of margins and profitability metrics with precise numbers
               5. Explaining competitive advantages that could sustain growth over 3-5+ years
               6. Using Phil Fisher's methodical, growth-focused, and long-term oriented voice
-              
+
               For example, if bullish: "This company exhibits the sustained growth characteristics we seek, with revenue increasing at 18% annually over five years. Management has demonstrated exceptional foresight by allocating 15% of revenue to R&D, which has produced three promising new product lines. The consistent operating margins of 22-24% indicate pricing power and operational efficiency that should continue to..."
-              
+
               For example, if bearish: "Despite operating in a growing industry, management has failed to translate R&D investments (only 5% of revenue) into meaningful new products. Margins have fluctuated between 10-15%, showing inconsistent operational execution. The company faces increasing competition from three larger competitors with superior distribution networks. Given these concerns about long-term growth sustainability..."
-              
+
               You must output a JSON object with:
                 - "signal": "bullish" or "bearish" or "neutral"
                 - "confidence": a float between 0 and 100

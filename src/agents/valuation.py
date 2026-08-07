@@ -3,16 +3,16 @@ from __future__ import annotations
 """Valuation Agent
 
 Implements four complementary valuation methodologies and aggregates them with
-configurable weights. 
+configurable weights.
 """
 
-import json
-import statistics
-from langchain_core.messages import HumanMessage
-from src.graph.state import AgentState, show_agent_reasoning
-from src.utils.progress import progress
-from src.utils.api_key import get_api_key_from_state
-from src.tools.api import (
+import json  # noqa: E402
+import statistics  # noqa: E402
+from langchain_core.messages import HumanMessage  # noqa: E402
+from src.graph.state import AgentState, show_agent_reasoning  # noqa: E402
+from src.utils.progress import progress  # noqa: E402
+from src.utils.api_key import get_api_key_from_state  # noqa: E402
+from src.tools.api import (  # noqa: E402
     get_financial_metrics,
     get_market_cap,
     search_line_items,
@@ -54,7 +54,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
                 "capital_expenditure",
                 "working_capital",
                 "total_debt",
-                "cash_and_equivalents", 
+                "cash_and_equivalents",
                 "interest_expense",
                 "revenue",
                 "operating_income",
@@ -91,7 +91,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
 
         # Enhanced Discounted Cash Flow with WACC and scenarios
         progress.update_status(agent_id, ticker, "Calculating WACC and enhanced DCF")
-        
+
         # Calculate WACC
         wacc = calculate_wacc(
             market_cap=most_recent_metrics.market_cap or 0,
@@ -100,13 +100,13 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
             interest_coverage=most_recent_metrics.interest_coverage,
             debt_to_equity=most_recent_metrics.debt_to_equity,
         )
-        
+
         # Prepare FCF history for enhanced DCF
         fcf_history = []
         for li in line_items:
             if hasattr(li, 'free_cash_flow') and li.free_cash_flow is not None:
                 fcf_history.append(li.free_cash_flow)
-        
+
         # Enhanced DCF with scenarios
         dcf_results = calculate_dcf_scenarios(
             fcf_history=fcf_history,
@@ -119,7 +119,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
             market_cap=most_recent_metrics.market_cap or 0,
             revenue_growth=most_recent_metrics.revenue_growth
         )
-        
+
         dcf_val = dcf_results['expected_value']
 
         # Implied Equity Value
@@ -171,7 +171,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
                     f"Value: ${vals['value']:,.2f}, Market Cap: ${market_cap:,.2f}, "
                     f"Gap: {vals['gap']:.1%}, Weight: {vals['weight']*100:.0f}%"
                 )
-                
+
                 # Add enhanced DCF details
                 if m == "dcf" and 'dcf_results' in locals():
                     enhanced_details = (
@@ -181,7 +181,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
                     )
                 else:
                     enhanced_details = base_details
-                
+
                 reasoning[f"{m}_analysis"] = {
                     "signal": (
                         "bullish" if vals["gap"] and vals["gap"] > 0.15 else
@@ -189,12 +189,12 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
                     ),
                     "details": enhanced_details,
                 }
-        
+
         # Add overall DCF scenario summary if available
         if 'dcf_results' in locals():
             reasoning["dcf_scenario_analysis"] = {
                 "bear_case": f"${dcf_results['downside']:,.2f}",
-                "base_case": f"${dcf_results['scenarios']['base']:,.2f}",  
+                "base_case": f"${dcf_results['scenarios']['base']:,.2f}",
                 "bull_case": f"${dcf_results['upside']:,.2f}",
                 "wacc_used": f"{wacc:.1%}",
                 "fcf_periods_analyzed": len(fcf_history)
@@ -216,7 +216,7 @@ def valuation_analyst_agent(state: AgentState, agent_id: str = "valuation_analys
     state["data"]["analyst_signals"][agent_id] = valuation_analysis
 
     progress.update_status(agent_id, None, "Done")
-    
+
     return {"messages": [msg], "data": data}
 
 #############################
@@ -346,30 +346,30 @@ def calculate_wacc(
     market_risk_premium: float = 0.06
 ) -> float:
     """Calculate WACC using available financial data."""
-    
+
     # Cost of Equity (CAPM)
     cost_of_equity = risk_free_rate + beta_proxy * market_risk_premium
-    
+
     # Cost of Debt - estimate from interest coverage
     if interest_coverage and interest_coverage > 0:
         # Higher coverage = lower cost of debt
         cost_of_debt = max(risk_free_rate + 0.01, risk_free_rate + (10 / interest_coverage))
     else:
         cost_of_debt = risk_free_rate + 0.05  # Default spread
-    
+
     # Weights
     net_debt = max((total_debt or 0) - (cash or 0), 0)
     total_value = market_cap + net_debt
-    
+
     if total_value > 0:
         weight_equity = market_cap / total_value
         weight_debt = net_debt / total_value
-        
+
         # Tax shield (assume 25% corporate tax rate)
         wacc = (weight_equity * cost_of_equity) + (weight_debt * cost_of_debt * 0.75)
     else:
         wacc = cost_of_equity
-    
+
     return min(max(wacc, 0.06), 0.20)  # Floor 6%, cap 20%
 
 
@@ -377,17 +377,17 @@ def calculate_fcf_volatility(fcf_history: list[float]) -> float:
     """Calculate FCF volatility as coefficient of variation."""
     if len(fcf_history) < 3:
         return 0.5  # Default moderate volatility
-    
+
     # Filter out zeros and negatives for volatility calc
     positive_fcf = [fcf for fcf in fcf_history if fcf > 0]
     if len(positive_fcf) < 2:
         return 0.8  # High volatility if mostly negative FCF
-    
+
     try:
         mean_fcf = statistics.mean(positive_fcf)
         std_fcf = statistics.stdev(positive_fcf)
         return min(std_fcf / mean_fcf, 1.0) if mean_fcf > 0 else 0.8
-    except:
+    except Exception:
         return 0.5
 
 
@@ -399,52 +399,52 @@ def calculate_enhanced_dcf_value(
     revenue_growth: float | None = None
 ) -> float:
     """Enhanced DCF with multi-stage growth."""
-    
+
     if not fcf_history or fcf_history[0] <= 0:
         return 0
-    
+
     # Analyze FCF trend and quality
     fcf_current = fcf_history[0]
     fcf_avg_3yr = sum(fcf_history[:3]) / min(3, len(fcf_history))
     fcf_volatility = calculate_fcf_volatility(fcf_history)
-    
+
     # Stage 1: High Growth (Years 1-3)
     # Use revenue growth but cap based on business maturity
     high_growth = min(revenue_growth or 0.05, 0.25) if revenue_growth else 0.05
     if market_cap > 50_000_000_000:  # Large cap
         high_growth = min(high_growth, 0.10)
-    
+
     # Stage 2: Transition (Years 4-7)
     transition_growth = (high_growth + 0.03) / 2
-    
+
     # Stage 3: Terminal (steady state)
     terminal_growth = min(0.03, high_growth * 0.6)
-    
+
     # Project FCF with stages
     pv = 0
     base_fcf = max(fcf_current, fcf_avg_3yr * 0.85)  # Conservative base
-    
+
     # High growth stage
     for year in range(1, 4):
         fcf_projected = base_fcf * (1 + high_growth) ** year
         pv += fcf_projected / (1 + wacc) ** year
-    
+
     # Transition stage
     for year in range(4, 8):
         transition_rate = transition_growth * (8 - year) / 4  # Declining
         fcf_projected = base_fcf * (1 + high_growth) ** 3 * (1 + transition_rate) ** (year - 3)
         pv += fcf_projected / (1 + wacc) ** year
-    
+
     # Terminal value
     final_fcf = base_fcf * (1 + high_growth) ** 3 * (1 + transition_growth) ** 4
     if wacc <= terminal_growth:
         terminal_growth = wacc * 0.8  # Adjust if invalid
     terminal_value = (final_fcf * (1 + terminal_growth)) / (wacc - terminal_growth)
     pv_terminal = terminal_value / (1 + wacc) ** 7
-    
+
     # Quality adjustment based on FCF volatility
     quality_factor = max(0.7, 1 - (fcf_volatility * 0.5))
-    
+
     return (pv + pv_terminal) * quality_factor
 
 
@@ -456,20 +456,20 @@ def calculate_dcf_scenarios(
     revenue_growth: float | None = None
 ) -> dict:
     """Calculate DCF under multiple scenarios."""
-    
+
     scenarios = {
         'bear': {'growth_adj': 0.5, 'wacc_adj': 1.2, 'terminal_adj': 0.8},
         'base': {'growth_adj': 1.0, 'wacc_adj': 1.0, 'terminal_adj': 1.0},
         'bull': {'growth_adj': 1.5, 'wacc_adj': 0.9, 'terminal_adj': 1.2}
     }
-    
+
     results = {}
     base_revenue_growth = revenue_growth or 0.05
-    
+
     for scenario, adjustments in scenarios.items():
         adjusted_revenue_growth = base_revenue_growth * adjustments['growth_adj']
         adjusted_wacc = wacc * adjustments['wacc_adj']
-        
+
         results[scenario] = calculate_enhanced_dcf_value(
             fcf_history=fcf_history,
             growth_metrics=growth_metrics,
@@ -477,14 +477,14 @@ def calculate_dcf_scenarios(
             market_cap=market_cap,
             revenue_growth=adjusted_revenue_growth
         )
-    
+
     # Probability-weighted average
     expected_value = (
-        results['bear'] * 0.2 + 
-        results['base'] * 0.6 + 
+        results['bear'] * 0.2 +
+        results['base'] * 0.6 +
         results['bull'] * 0.2
     )
-    
+
     return {
         'scenarios': results,
         'expected_value': expected_value,

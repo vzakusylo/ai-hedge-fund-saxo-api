@@ -156,7 +156,7 @@ def fundamentals_analyst_agent(state: AgentState, agent_id: str = "fundamentals_
     state["data"]["analyst_signals"][agent_id] = fundamental_analysis
 
     progress.update_status(agent_id, None, "Done")
-    
+
     return {
         "messages": [message],
         "data": data,

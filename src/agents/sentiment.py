@@ -42,14 +42,14 @@ def sentiment_analyst_agent(state: AgentState, agent_id: str = "sentiment_analys
 
         # Get the sentiment from the company news
         sentiment = pd.Series([n.sentiment for n in company_news]).dropna()
-        news_signals = np.where(sentiment == "negative", "bearish", 
+        news_signals = np.where(sentiment == "negative", "bearish",
                               np.where(sentiment == "positive", "bullish", "neutral")).tolist()
-        
+
         progress.update_status(agent_id, ticker, "Combining signals")
         # Combine signals from both sources with weights
         insider_weight = 0.3
         news_weight = 0.7
-        
+
         # Calculate weighted signal counts
         bullish_signals = (
             insider_signals.count("bullish") * insider_weight +
@@ -72,11 +72,11 @@ def sentiment_analyst_agent(state: AgentState, agent_id: str = "sentiment_analys
         confidence = 0  # Default confidence when there are no signals
         if total_weighted_signals > 0:
             confidence = round((max(bullish_signals, bearish_signals) / total_weighted_signals) * 100, 2)
-        
+
         # Create structured reasoning similar to technical analysis
         reasoning = {
             "insider_trading": {
-                "signal": "bullish" if insider_signals.count("bullish") > insider_signals.count("bearish") else 
+                "signal": "bullish" if insider_signals.count("bullish") > insider_signals.count("bearish") else
                          "bearish" if insider_signals.count("bearish") > insider_signals.count("bullish") else "neutral",
                 "confidence": round((max(insider_signals.count("bullish"), insider_signals.count("bearish")) / max(len(insider_signals), 1)) * 100),
                 "metrics": {
@@ -89,7 +89,7 @@ def sentiment_analyst_agent(state: AgentState, agent_id: str = "sentiment_analys
                 }
             },
             "news_sentiment": {
-                "signal": "bullish" if news_signals.count("bullish") > news_signals.count("bearish") else 
+                "signal": "bullish" if news_signals.count("bullish") > news_signals.count("bearish") else
                          "bearish" if news_signals.count("bearish") > news_signals.count("bullish") else "neutral",
                 "confidence": round((max(news_signals.count("bullish"), news_signals.count("bearish")) / max(len(news_signals), 1)) * 100),
                 "metrics": {

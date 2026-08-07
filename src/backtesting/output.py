@@ -32,7 +32,7 @@ class OutputBuilder:
     ) -> List[list]:
         date_rows: List[list] = []
 
-        analyst_signals = agent_output.get("analyst_signals", {})
+        agent_output.get("analyst_signals", {})
         decisions = agent_output.get("decisions", {})
 
         for ticker in tickers:

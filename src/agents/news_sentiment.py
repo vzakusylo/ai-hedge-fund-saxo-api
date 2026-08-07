@@ -2,7 +2,6 @@
 
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
-from src.data.models import CompanyNews
 import pandas as pd
 import numpy as np
 import json
@@ -56,19 +55,19 @@ def news_sentiment_agent(state: AgentState, agent_id: str = "news_sentiment_agen
         news_signals = []
         sentiment_confidences = {}  # Store confidence scores for each article
         sentiments_classified_by_llm = 0
-        
+
         if company_news:
             # Check the 10 most recent articles
             recent_articles = company_news[:10]
             articles_without_sentiment = [news for news in recent_articles if news.sentiment is None]
-            
+
             # Analyze only the 5 most recent articles without sentiment to reduce LLM calls
             if articles_without_sentiment:
               # We only take the first 5 articles, but this is configurable
               num_articles_to_analyze = 5
               articles_to_analyze = articles_without_sentiment[:num_articles_to_analyze]
               progress.update_status(agent_id, ticker, f"Analyzing sentiment for {len(articles_to_analyze)} articles")
-              
+
               for idx, news in enumerate(articles_to_analyze):
                 # We analyze based on title, but can also pass in the entire article text,
                 # but this is more expensive and requires extracting the text from the article.
@@ -174,10 +173,10 @@ def _calculate_confidence_score(
 ) -> float:
     """
     Calculate confidence score for a sentiment signal.
-    
-    Uses a weighted approach combining LLM confidence scores (70%) with 
+
+    Uses a weighted approach combining LLM confidence scores (70%) with
     signal proportion (30%) when LLM classifications are available.
-    
+
     Args:
         sentiment_confidences: Dictionary mapping news article IDs to confidence scores.
         company_news: List of CompanyNews objects.
@@ -185,37 +184,37 @@ def _calculate_confidence_score(
         bullish_signals: Count of bullish signals.
         bearish_signals: Count of bearish signals.
         total_signals: Total number of signals.
-        
+
     Returns:
         Confidence score as a float between 0 and 100.
     """
     if total_signals == 0:
         return 0.0
-    
+
     # Calculate weighted confidence using LLM confidence scores when available
     if sentiment_confidences:
         # Get articles that match the overall signal
         matching_articles = [
-            news for news in company_news 
+            news for news in company_news
             if news.sentiment and (
                 (overall_signal == "bullish" and news.sentiment == "positive") or
                 (overall_signal == "bearish" and news.sentiment == "negative") or
                 (overall_signal == "neutral" and news.sentiment == "neutral")
             )
         ]
-        
+
         # Calculate average confidence from LLM-classified articles that match the signal
         llm_confidences = [
-            sentiment_confidences[id(news)] 
-            for news in matching_articles 
+            sentiment_confidences[id(news)]
+            for news in matching_articles
             if id(news) in sentiment_confidences
         ]
-        
+
         if llm_confidences:
             # Weight: 70% from LLM confidence scores, 30% from signal proportion
             avg_llm_confidence = sum(llm_confidences) / len(llm_confidences)
             signal_proportion = (max(bullish_signals, bearish_signals) / total_signals) * 100
             return round(0.7 * avg_llm_confidence + 0.3 * signal_proportion, 2)
-    
+
     # Fallback to proportion-based confidence
     return round((max(bullish_signals, bearish_signals) / total_signals) * 100, 2)

@@ -174,7 +174,7 @@ def print_strategy(strategy: OptionStrategy) -> None:
     print(f"  Max Profit  : ${strategy.max_profit}" if strategy.max_profit else "  Max Profit  : N/A")
     print(f"  Breakeven   : ${strategy.breakeven}" if strategy.breakeven else "  Breakeven   : N/A")
     print(f"  Notes       : {strategy.notes}")
-    print(f"\n  Legs:")
+    print("\n  Legs:")
     for leg in strategy.legs:
         delta_str = f"  delta={leg.delta:.2f}" if leg.delta else ""
         bid_ask = f"  bid={leg.bid}  ask={leg.ask}" if leg.bid or leg.ask else ""
@@ -204,7 +204,7 @@ def execute_option_strategy(
         print(f"{Fore.YELLOW}Execute options strategy: {strategy.name}?")
         print(f"  Max risk: ${strategy.max_risk}  |  {strategy.notes}")
         if dry_run:
-            print(f"  [DRY RUN] Pre-check only — no real order")
+            print("  [DRY RUN] Pre-check only — no real order")
         ans = input(f"{Fore.CYAN}  Approve? [y/N]: {Style.RESET_ALL}").strip().lower()
         if ans != "y":
             print(Fore.RED + "  Rejected.")

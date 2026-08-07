@@ -299,7 +299,7 @@ def _analyze_contrarian_sentiment(news):
     sentiment_negative_count = sum(
         1 for n in news if n.sentiment and n.sentiment.lower() in ["negative", "bearish"]
     )
-    
+
     if sentiment_negative_count >= 5:
         score += 1  # The more hated, the better (assuming fundamentals hold up)
         details.append(f"{sentiment_negative_count} negative headlines (contrarian opportunity)")
@@ -338,7 +338,7 @@ def _generate_burry_output(
                 3. Highlight risk factors and why they are acceptable (or not)
                 4. Mention relevant insider activity or contrarian opportunities
                 5. Use Burry's direct, number-focused communication style with minimal words
-                
+
                 For example, if bullish: "FCF yield 12.8%. EV/EBIT 6.2. Debt-to-equity 0.4. Net insider buying 25k shares. Market missing value due to overreaction to recent litigation. Strong buy."
                 For example, if bearish: "FCF yield only 2.1%. Debt-to-equity concerning at 2.3. Management diluting shareholders. Pass."
                 """,

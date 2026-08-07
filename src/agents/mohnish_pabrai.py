@@ -30,7 +30,7 @@ def mohnish_pabrai_agent(state: AgentState, agent_id: str = "mohnish_pabrai_agen
     # and potential for doubling in 2-3 years at low risk.
     for ticker in tickers:
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="annual", limit=8, api_key=api_key)
+        get_financial_metrics(ticker, end_date, period="annual", limit=8, api_key=api_key)
 
         progress.update_status(agent_id, ticker, "Gathering financial line items")
         line_items = search_line_items(
@@ -229,7 +229,7 @@ def analyze_pabrai_valuation(financial_line_items: list, market_cap: float | Non
 
     # Asset-light tilt: lower capex intensity preferred
     if capex_vals and len(financial_line_items) >= 3:
-        revenue_vals = [getattr(li, "revenue", None) for li in financial_line_items]
+        [getattr(li, "revenue", None) for li in financial_line_items]
         capex_to_revenue = []
         for i, li in enumerate(financial_line_items):
             revenue = getattr(li, "revenue", None)
@@ -357,4 +357,4 @@ def generate_pabrai_output(
         pydantic_model=MohnishPabraiSignal,
         agent_name=agent_id,
         default_factory=create_default_pabrai_signal,
-    ) 
+    )

@@ -5,13 +5,12 @@ from __future__ import annotations
 Implements a growth-focused valuation methodology.
 """
 
-import json
-import statistics
-from langchain_core.messages import HumanMessage
-from src.graph.state import AgentState, show_agent_reasoning
-from src.utils.progress import progress
-from src.utils.api_key import get_api_key_from_state
-from src.tools.api import (
+import json  # noqa: E402
+from langchain_core.messages import HumanMessage  # noqa: E402
+from src.graph.state import AgentState, show_agent_reasoning  # noqa: E402
+from src.utils.progress import progress  # noqa: E402
+from src.utils.api_key import get_api_key_from_state  # noqa: E402
+from src.tools.api import (  # noqa: E402
     get_financial_metrics,
     get_insider_trades,
 )
@@ -39,7 +38,7 @@ def growth_analyst_agent(state: AgentState, agent_id: str = "growth_analyst_agen
         if not financial_metrics or len(financial_metrics) < 4:
             progress.update_status(agent_id, ticker, "Failed: Not enough financial metrics")
             continue
-        
+
         most_recent_metrics = financial_metrics[0]
 
         # --- Insider Trades ---
@@ -53,19 +52,19 @@ def growth_analyst_agent(state: AgentState, agent_id: str = "growth_analyst_agen
         # ------------------------------------------------------------------
         # Tool Implementation
         # ------------------------------------------------------------------
-        
+
         # 1. Historical Growth Analysis
         growth_trends = analyze_growth_trends(financial_metrics)
-        
+
         # 2. Growth-Oriented Valuation
         valuation_metrics = analyze_valuation(most_recent_metrics)
-        
+
         # 3. Margin Expansion Monitor
         margin_trends = analyze_margin_trends(financial_metrics)
-        
+
         # 4. Insider Conviction Tracker
         insider_conviction = analyze_insider_conviction(insider_trades)
-        
+
         # 5. Financial Health Check
         financial_health = check_financial_health(most_recent_metrics)
 
@@ -79,7 +78,7 @@ def growth_analyst_agent(state: AgentState, agent_id: str = "growth_analyst_agen
             "insider": insider_conviction['score'],
             "health": financial_health['score']
         }
-        
+
         weights = {
             "growth": 0.40,
             "valuation": 0.25,
@@ -89,14 +88,14 @@ def growth_analyst_agent(state: AgentState, agent_id: str = "growth_analyst_agen
         }
 
         weighted_score = sum(scores[key] * weights[key] for key in scores)
-        
+
         if weighted_score > 0.6:
             signal = "bullish"
         elif weighted_score < 0.4:
             signal = "bearish"
         else:
             signal = "neutral"
-            
+
         confidence = round(abs(weighted_score - 0.5) * 2 * 100)
 
         reasoning = {
@@ -128,7 +127,7 @@ def growth_analyst_agent(state: AgentState, agent_id: str = "growth_analyst_agen
     state["data"]["analyst_signals"][agent_id] = growth_analysis
 
     progress.update_status(agent_id, None, "Done")
-    
+
     return {"messages": [msg], "data": data}
 
 #############################
@@ -140,10 +139,10 @@ def _calculate_trend(data: list[float | None]) -> float:
     clean_data = [d for d in data if d is not None]
     if len(clean_data) < 2:
         return 0.0
-    
+
     y = clean_data
     x = list(range(len(y)))
-    
+
     try:
         # Simple linear regression
         sum_x = sum(x)
@@ -151,7 +150,7 @@ def _calculate_trend(data: list[float | None]) -> float:
         sum_xy = sum(i * j for i, j in zip(x, y))
         sum_x2 = sum(i**2 for i in x)
         n = len(y)
-        
+
         slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x**2)
         return slope
     except ZeroDivisionError:
@@ -159,7 +158,7 @@ def _calculate_trend(data: list[float | None]) -> float:
 
 def analyze_growth_trends(metrics: list) -> dict:
     """Analyzes historical growth trends."""
-    
+
     rev_growth = [m.revenue_growth for m in metrics]
     eps_growth = [m.earnings_per_share_growth for m in metrics]
     fcf_growth = [m.free_cash_flow_growth for m in metrics]
@@ -170,7 +169,7 @@ def analyze_growth_trends(metrics: list) -> dict:
 
     # Score based on recent growth and trend
     score = 0
-    
+
     # Revenue
     if rev_growth[0] is not None:
         if rev_growth[0] > 0.20:
@@ -179,7 +178,7 @@ def analyze_growth_trends(metrics: list) -> dict:
             score += 0.2
         if rev_trend > 0:
             score += 0.1 # Accelerating
-            
+
     # EPS
     if eps_growth[0] is not None:
         if eps_growth[0] > 0.20:
@@ -188,12 +187,12 @@ def analyze_growth_trends(metrics: list) -> dict:
             score += 0.1
         if eps_trend > 0:
             score += 0.05
-    
+
     # FCF
     if fcf_growth[0] is not None:
         if fcf_growth[0] > 0.15:
             score += 0.1
-            
+
     score = min(score, 1.0)
 
     return {
@@ -208,28 +207,28 @@ def analyze_growth_trends(metrics: list) -> dict:
 
 def analyze_valuation(metrics) -> dict:
     """Analyzes valuation from a growth perspective."""
-    
+
     peg_ratio = metrics.peg_ratio
     ps_ratio = metrics.price_to_sales_ratio
-    
+
     score = 0
-    
+
     # PEG Ratio
     if peg_ratio is not None:
         if peg_ratio < 1.0:
             score += 0.5
         elif peg_ratio < 2.0:
             score += 0.25
-            
+
     # Price to Sales Ratio
     if ps_ratio is not None:
         if ps_ratio < 2.0:
             score += 0.5
         elif ps_ratio < 5.0:
             score += 0.25
-            
+
     score = min(score, 1.0)
-    
+
     return {
         "score": score,
         "peg_ratio": peg_ratio,
@@ -238,7 +237,7 @@ def analyze_valuation(metrics) -> dict:
 
 def analyze_margin_trends(metrics: list) -> dict:
     """Analyzes historical margin trends."""
-    
+
     gross_margins = [m.gross_margin for m in metrics]
     operating_margins = [m.operating_margin for m in metrics]
     net_margins = [m.net_margin for m in metrics]
@@ -246,9 +245,9 @@ def analyze_margin_trends(metrics: list) -> dict:
     gm_trend = _calculate_trend(gross_margins)
     om_trend = _calculate_trend(operating_margins)
     nm_trend = _calculate_trend(net_margins)
-    
+
     score = 0
-    
+
     # Gross Margin
     if gross_margins[0] is not None:
         if gross_margins[0] > 0.5: # Healthy margin
@@ -262,13 +261,13 @@ def analyze_margin_trends(metrics: list) -> dict:
             score += 0.2
         if om_trend > 0: # Expanding
             score += 0.2
-            
+
     # Net Margin Trend
     if nm_trend > 0:
         score += 0.2
-        
+
     score = min(score, 1.0)
-    
+
     return {
         "score": score,
         "gross_margin": gross_margins[0],
@@ -281,15 +280,15 @@ def analyze_margin_trends(metrics: list) -> dict:
 
 def analyze_insider_conviction(trades: list) -> dict:
     """Analyzes insider trading activity."""
-    
+
     buys = sum(t.transaction_value for t in trades if t.transaction_value and t.transaction_shares > 0)
     sells = sum(abs(t.transaction_value) for t in trades if t.transaction_value and t.transaction_shares < 0)
-    
+
     if (buys + sells) == 0:
         net_flow_ratio = 0
     else:
         net_flow_ratio = (buys - sells) / (buys + sells)
-    
+
     score = 0
     if net_flow_ratio > 0.5:
         score = 1.0
@@ -299,7 +298,7 @@ def analyze_insider_conviction(trades: list) -> dict:
         score = 0.5 # Neutral
     else:
         score = 0.2
-        
+
     return {
         "score": score,
         "net_flow_ratio": net_flow_ratio,
@@ -309,28 +308,28 @@ def analyze_insider_conviction(trades: list) -> dict:
 
 def check_financial_health(metrics) -> dict:
     """Checks the company's financial health."""
-    
+
     debt_to_equity = metrics.debt_to_equity
     current_ratio = metrics.current_ratio
-    
+
     score = 1.0
-    
+
     # Debt to Equity
     if debt_to_equity is not None:
         if debt_to_equity > 1.5:
             score -= 0.5
         elif debt_to_equity > 0.8:
             score -= 0.2
-            
+
     # Current Ratio
     if current_ratio is not None:
         if current_ratio < 1.0:
             score -= 0.5
         elif current_ratio < 1.5:
             score -= 0.2
-            
+
     score = max(score, 0.0)
-    
+
     return {
         "score": score,
         "debt_to_equity": debt_to_equity,

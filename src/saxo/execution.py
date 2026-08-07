@@ -9,7 +9,6 @@ Flow:
 """
 from __future__ import annotations
 
-import sys
 from typing import Optional
 
 from colorama import Fore, Style, init
